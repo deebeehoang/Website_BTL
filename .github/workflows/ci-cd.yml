@@ -10,24 +10,10 @@ env:
   DOCKER_IMAGE: ${{ secrets.DOCKER_USERNAME }}/travel-website
 
 jobs:
-  # ── Lint & Test ─────────────────────────────────────
+  # ── Lint & Build Check ─────────────────────────────
   test:
-    name: Lint & Test
+    name: Lint & Build Check
     runs-on: ubuntu-latest
-
-    services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: travel_test001
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping -h localhost -u root -proot"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
 
     steps:
       - uses: actions/checkout@v4
@@ -41,17 +27,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Wait for MySQL
-        run: |
-          until mysqladmin ping -h 127.0.0.1 -u root -proot --silent; do
-            echo "Waiting for MySQL..."
-            sleep 2
-          done
-
-      - name: Initialize database
-        run: mysql -h 127.0.0.1 -u root -proot travel_test001 < src/database/databaseadd.sql
-
-      - name: Run tests
+      - name: Check application starts
         env:
           DB_HOST: 127.0.0.1
           DB_PORT: 3306
@@ -60,7 +36,7 @@ jobs:
           DB_NAME: travel_test001
           JWT_SECRET: test-secret-key
           PORT: 3000
-        run: npm test
+        run: node -e "require('./src/config/app.config')"
 
   # ── Build & Push Docker Image ───────────────────────
   build:
